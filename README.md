@@ -3,6 +3,7 @@ agri 使用文件
 1. run ifps in daemon
 2. run geth with rpc api(need to open personal module)
 3. if the contract didn't be deployed, please deploy it
+4. ``pip3 install -r  requirements.txt``
 4. set the config
 ![](https://i.imgur.com/GfcyPpn.png)
 
