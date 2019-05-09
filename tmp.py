@@ -1,3 +1,4 @@
+from web3 import Web3
 import sys
 import requests
 import os
@@ -5,22 +6,13 @@ import base58
 import json
 import subprocess
 from pprint import pprint
-
 from config import *
-
-from web3 import Web3
-w3 = Web3(Web3.HTTPProvider(gethNode))
+from ipfsUtil import ipfsAdd, ipfsCat
+w3 = Web3(Web3.HTTPProvider(ethereumNode))
 if not w3.isConnected():
     print("ethereum node error")
     exit()
 
-coinBase = w3.eth.coinbase
-w3.personal.unlockAccount(coinBase,pwd)
-
-agri = w3.eth.contract(
-    address=contractAddr,
-    abi=contractABI,
-)
 
 def convertIpfsBytes32(hash_string):
     bytes_array = base58.b58decode(hash_string)
@@ -28,19 +20,28 @@ def convertIpfsBytes32(hash_string):
 
 if len(sys.argv) == 3:
     if sys.argv[1].lower() == "add":
+        #ipfs start
         print("ready to add file to ipfs")
-        files = {'file': open(sys.argv[2], 'rb')}
-        r = requests.post(url + "add", files=files)
-        print(r.text)
-        picHash = json.loads(r.text)['Hash']
+        fileHash = ipfsAdd(sys.argv[2])
+        print(fileHash)
+        picHash = json.loads(fileHash)['Hash']
         picHash = convertIpfsBytes32(picHash)
-        txID = agri.functions.addNewPic(picHash).transact({'from': coinBase})
-        print(txID)
-
+        #etherum start
+        print("ready to add fileHash to ethereum")
+        contract_ = w3.eth.contract(
+            address="0x1c445830f83950A2D6bdD608cb9740650e21C829", abi=contract_interface["abi"])
+        acct = w3.eth.account.privateKeyToAccount(privateKey)
+        construct_txn = contract_.functions.addNewPic(picHash).buildTransaction({
+            'from': acct.address,
+            'nonce': w3.eth.getTransactionCount(acct.address),
+            'gas': 1728712,
+            'gasPrice': w3.toWei('21', 'gwei')})
+        signed = acct.signTransaction(construct_txn)
+        txId = w3.eth.sendRawTransaction(signed.rawTransaction)
+        print("txid : ", w3.toHex(txId))
     elif sys.argv[1].lower() == "cat":
         print("ready to add file to ipfs")
-        with open("outFile", "wb") as out:
-            subprocess.Popen(["ipfs", "cat", sys.argv[2]], stdout=out)
-        print("file output to ./outFile")
+        ipfsCat(sys.argv[2], True)
+        print("file output to ./outFile.jpg")
 else:
-    print("try it again")
+    print("read reademe, and try it again")
