@@ -14,24 +14,35 @@ if not w3.isConnected():
     exit()
 
 
+def convertBytes32Ipfs(b):
+    prefix = b'\x12 '
+    b = prefix + b
+    b = base58.b58encode(b)
+    return b
+
+
 def convertIpfsBytes32(hash_string):
-    bytes_array = base58.b58decode(hash_string)
-    return bytes_array[2:]
+    b = base58.b58decode(hash_string)
+    print("base58 `hex` of ",hash_string,"=",b.hex())
+    return b[2:]
+
 
 if len(sys.argv) == 3:
     if sys.argv[1].lower() == "add":
-        #ipfs start
-        print("ready to add file to ipfs")
-        fileHash = ipfsAdd(sys.argv[2])
+        # ipfs start
+        fileInfo = (sys.argv[2]).split(":")
+        id = fileInfo[0]
+        print("ready to add ", id,"'s file:",fileInfo[1]," to ipfs")
+        fileHash = ipfsAdd(fileInfo[1])
         print(fileHash)
         picHash = json.loads(fileHash)['Hash']
         picHash = convertIpfsBytes32(picHash)
-        #etherum start
+        # etherum start
         print("ready to add fileHash to ethereum")
         contract_ = w3.eth.contract(
-            address="0x1c445830f83950A2D6bdD608cb9740650e21C829", abi=contract_interface["abi"])
+            address="0xecab3320Ca2d9377850428fe28C302573B8f0C16", abi=contract_interface["abi"])
         acct = w3.eth.account.privateKeyToAccount(privateKey)
-        construct_txn = contract_.functions.addNewPic(picHash).buildTransaction({
+        construct_txn = contract_.functions.addNewHash(id, picHash).buildTransaction({
             'from': acct.address,
             'nonce': w3.eth.getTransactionCount(acct.address),
             'gas': 1728712,
@@ -40,7 +51,7 @@ if len(sys.argv) == 3:
         txId = w3.eth.sendRawTransaction(signed.rawTransaction)
         print("txid : ", w3.toHex(txId))
     elif sys.argv[1].lower() == "cat":
-        print("ready to add file to ipfs")
+        print("ready to get file from ipfs")
         ipfsCat(sys.argv[2], True)
         print("file output to ./outFile.jpg")
 else:
